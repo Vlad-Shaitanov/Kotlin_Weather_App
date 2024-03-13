@@ -27,36 +27,5 @@ class MainActivity : AppCompatActivity() {
             .beginTransaction()
             .replace(R.id.placeHolder, MainFragment.newInstance())
             .commit()
-
-//        binding.btnGet.setOnClickListener {
-//            getData("London")
-//        }
-
     }
-
-//    private fun getData(name: String){
-//        val url = "https://api.weatherapi.com/v1/current.json?key=$keyWeather&q=$name&aqi=no"
-//
-//        //Создали очередь для запросов Volley
-//        val queue = Volley.newRequestQueue(this)
-//        //Настройка запроса
-//        val stringRequest = StringRequest(
-//            Request.Method.GET,
-//            url,
-//            {response ->
-//                val obj = JSONObject(response)
-//
-//                val temp_c = obj.getJSONObject("current").getString("temp_c")
-//                Log.d("MyLog", "Volley response: $temp_c")
-//                binding.tvTemp.text = temp_c
-//            },
-//            {
-//                Log.d("MyLog", "Volley Error: $it")
-//            }
-//        )
-//
-//        queue.add(stringRequest)
-//
-//
-//    }
 }
