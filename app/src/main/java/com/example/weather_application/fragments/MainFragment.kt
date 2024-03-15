@@ -11,15 +11,18 @@ import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.FragmentActivity
+import androidx.fragment.app.activityViewModels
 import com.android.volley.Request
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
 import com.example.weather_application.BuildConfig
+import com.example.weather_application.MainViewModel
 import com.example.weather_application.R
 import com.example.weather_application.adapters.VpAdapter
 import com.example.weather_application.adapters.WeatherModel
 import com.example.weather_application.databinding.FragmentMainBinding
 import com.google.android.material.tabs.TabLayoutMediator
+import com.squareup.picasso.Picasso
 import org.json.JSONObject
 
 class MainFragment : Fragment() {
@@ -34,6 +37,7 @@ class MainFragment : Fragment() {
     private lateinit var pLauncher: ActivityResultLauncher<String>
     private lateinit var binding: FragmentMainBinding
     private val apiKey = BuildConfig.API_KEY_WEATHERAPI //Ключ от Weather Api
+    private val model: MainViewModel by activityViewModels()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -49,7 +53,8 @@ class MainFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         checkPermission()
         initViewAdapter()
-        getWeatherData("London")
+        updateCurrentCard() // Ждем обновлений данных liveData
+        getWeatherData("Moscow")
     }
 
     private fun initViewAdapter() = with(binding) {
@@ -64,6 +69,23 @@ class MainFragment : Fragment() {
             //Указываем названия для табов
             tab.text = getString(layoutTabsList[position])
         }.attach()
+    }
+
+    private fun updateCurrentCard() = with(binding) {
+        model.liveDataCurrent.observe(viewLifecycleOwner) {
+            val maxMinTemp = "${it.maxTemp}°C / ${it.minTemp}°C"
+
+            tvData.text = it.time
+            tvCity.text = it.city
+            tvCurrentTemp.text = it.currentTemp
+            tvCondition.text = it.condition
+            tvMaxMin.text = maxMinTemp
+
+            //Указываем библиотеке Picasso загрузить картинку в нужное место
+            Picasso.get()
+                .load("https:${it.imageUrl}")
+                .into(ivWeather)
+        }
     }
 
     private fun permissionListener() {
@@ -123,6 +145,8 @@ class MainFragment : Fragment() {
             obj.getJSONObject("current").getJSONObject("condition").getString("icon"),
             weatherItem.hours
         )
+
+        model.liveDataCurrent.value = item
 
         Log.d("MyLog", "Item: $item")
     }
