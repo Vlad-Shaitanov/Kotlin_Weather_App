@@ -1,6 +1,7 @@
 package com.example.weather_application.fragments
 
 import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
 import androidx.fragment.app.Fragment
@@ -10,6 +11,7 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.app.ActivityCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.activityViewModels
 import com.android.volley.Request
@@ -21,6 +23,11 @@ import com.example.weather_application.R
 import com.example.weather_application.adapters.VpAdapter
 import com.example.weather_application.adapters.WeatherModel
 import com.example.weather_application.databinding.FragmentMainBinding
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.tasks.CancellationToken
+import com.google.android.gms.tasks.CancellationTokenSource
 import com.google.android.material.tabs.TabLayoutMediator
 import com.squareup.picasso.Picasso
 import org.json.JSONObject
@@ -38,6 +45,7 @@ class MainFragment : Fragment() {
     private lateinit var binding: FragmentMainBinding
     private val apiKey = BuildConfig.API_KEY_WEATHERAPI //Ключ от Weather Api
     private val model: MainViewModel by activityViewModels()
+    private lateinit var fLocationClient: FusedLocationProviderClient //Для работы с местоположением
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -53,8 +61,9 @@ class MainFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         checkPermission()
         initViewAdapter()
+        initLocationClient()
         updateCurrentCard() // Ждем обновлений данных liveData
-        getWeatherData("Moscow")
+        getLocation()
     }
 
     private fun initViewAdapter() = with(binding) {
@@ -69,6 +78,39 @@ class MainFragment : Fragment() {
             //Указываем названия для табов
             tab.text = getString(layoutTabsList[position])
         }.attach()
+
+        ibtnSync.setOnClickListener {
+            /*При клике на кнопку синхронизации, возвращаемся на первый
+            таб с погодой по часам и запрашиваем новые данные
+            */
+            tabLayout.selectTab(tabLayout.getTabAt(0))
+            getLocation()
+        }
+    }
+
+    private fun initLocationClient() {
+        fLocationClient = LocationServices.getFusedLocationProviderClient(requireContext())
+    }
+
+    private fun getLocation() {
+        val cancellationToken = CancellationTokenSource()
+        if (ActivityCompat.checkSelfPermission(
+                requireContext(),
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
+                requireContext(),
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+        fLocationClient.getCurrentLocation(
+            LocationRequest.PRIORITY_HIGH_ACCURACY,
+            cancellationToken.token
+        ).addOnCompleteListener {
+            //Колбэк при получении местоположения запросит новые данные о погоде
+            getWeatherData("${it.result.latitude},${it.result.longitude}")
+        }
     }
 
     private fun updateCurrentCard() = with(binding) {
