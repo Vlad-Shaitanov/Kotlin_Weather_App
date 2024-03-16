@@ -1,8 +1,12 @@
 package com.example.weather_application.fragments
 
 import android.Manifest
+import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.location.LocationManager
 import android.os.Bundle
+import android.provider.Settings
 import android.util.Log
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
@@ -18,6 +22,7 @@ import com.android.volley.Request
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
 import com.example.weather_application.BuildConfig
+import com.example.weather_application.DialogManager
 import com.example.weather_application.MainViewModel
 import com.example.weather_application.R
 import com.example.weather_application.adapters.VpAdapter
@@ -63,7 +68,12 @@ class MainFragment : Fragment() {
         initViewAdapter()
         initLocationClient()
         updateCurrentCard() // Ждем обновлений данных liveData
-        getLocation()
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        checkLocation()
     }
 
     private fun initViewAdapter() = with(binding) {
@@ -84,7 +94,7 @@ class MainFragment : Fragment() {
             таб с погодой по часам и запрашиваем новые данные
             */
             tabLayout.selectTab(tabLayout.getTabAt(0))
-            getLocation()
+            checkLocation()
         }
     }
 
@@ -92,7 +102,35 @@ class MainFragment : Fragment() {
         fLocationClient = LocationServices.getFusedLocationProviderClient(requireContext())
     }
 
+    private fun checkLocation() {
+        //Если GPS включен, то получаем данные
+        if (isLocationEnabled()) {
+            getLocation()
+        } else {
+            DialogManager.locationSettingsDialog(requireContext(), object : DialogManager.Listener {
+                override fun onClick() {
+                    //Открываем активити с настройками
+                    startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+                }
+
+            })
+        }
+    }
+
+    //Проверяем, включен ли GPS на устройстве
+    private fun isLocationEnabled(): Boolean {
+        val locationManager =
+            activity?.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+
+        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
+    }
+
     private fun getLocation() {
+        if (!isLocationEnabled()) {
+            Toast.makeText(requireContext(), "Location is disabled!", Toast.LENGTH_SHORT).show()
+            return
+        }
+
         val cancellationToken = CancellationTokenSource()
         if (ActivityCompat.checkSelfPermission(
                 requireContext(),
